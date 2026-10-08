@@ -213,7 +213,7 @@ export function definitions(service: SiteService) {
     {
       name: 'import_preview',
       description:
-        'Store a published target’s preview in the shared cache. Supply URL, public title/description, and either imageUrl or a base64 thumbnail (max 500 KB decoded). Image bytes are validated, resized, and stored in PostgreSQL. Fills missing images on existing links to this target; preserves custom images. Never send CMS credentials, private text, or draft content.',
+        'Store a public target’s preview in the shared cache. Supply URL, public title/description, and either imageUrl or a base64 thumbnail (max 500 KB decoded). Image bytes are validated, resized, and stored in PostgreSQL. Fills missing images on existing links to this target; preserves custom images. Never send credentials, private text, or unpublished content.',
       readOnly: false,
       schema: importPreviewSchema,
       run: (a: any) => service.previews.import(a),
@@ -221,7 +221,7 @@ export function definitions(service: SiteService) {
     {
       name: 'cache_existing_previews',
       description:
-        'Save images for existing links to PostgreSQL and fill missing images from known targets or public metadata. Processes up to 20 distinct targets per call; call again while remainingTargets > 0. Failed targets are returned for a laptop CMS import and skipped (counted in retryLater) for six hours. Does not replace existing custom titles or descriptions.',
+        'Save images for existing links to PostgreSQL and fill missing images from known targets or public metadata. Processes up to 20 distinct targets per call; call again while remainingTargets > 0. Failed targets are returned for a manual public-thumbnail import and skipped (counted in retryLater) for six hours. Does not replace existing custom titles or descriptions.',
       readOnly: false,
       schema: z.object({}),
       run: () => service.previews.backfill(),

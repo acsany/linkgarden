@@ -27,7 +27,7 @@ export const importPreviewSchema = z
     title: z.string().max(200).default(''),
     description: z.string().max(1000).default(''),
     imageUrl: httpUrl.optional(),
-    // Laptop importer sends a compressed thumbnail, never CMS credentials or article bodies.
+    // An authenticated caller may send a compressed public thumbnail.
     imageBase64: z
       .string()
       .max(700000)
@@ -236,7 +236,7 @@ export class PreviewStore {
     } catch {
       metadata.imageUrl = '';
       metadata.warning =
-        'The preview image could not be saved. You can import it from your laptop or choose another image URL.';
+        'The preview image could not be saved. Import a public thumbnail through the agent tool or choose another image URL.';
     }
     return metadata;
   }

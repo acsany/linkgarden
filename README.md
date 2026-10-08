@@ -31,6 +31,7 @@ Stored preview thumbnails have public, long-lived URLs even if a page is later a
 npm run check
 npm test
 npm run build
+npx playwright install chromium webkit
 npm run test:e2e
 npm run test:pwa
 ```
