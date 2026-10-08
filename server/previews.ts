@@ -197,7 +197,8 @@ export class PreviewStore {
     const cached = await this.cached(input);
     if (cached) return cached;
     const key = previewKey(input);
-    // Legacy records predate the shared cache. Reuse their image before trying the blocked page.
+    // Legacy records predate the shared cache. Their title and description may be
+    // private page-specific edits, so only reuse their stored image.
     const links = (
       await this.db.query(
         "SELECT url,title,description,image_url FROM links WHERE kind='link' AND image_url<>'' ORDER BY created_at DESC",
@@ -210,10 +211,10 @@ export class PreviewStore {
           ? await this.remote(link.image_url)
           : await this.resolve(link.image_url);
         if (!imageUrl) continue;
-        if (store) await this.remember(input, link.title, link.description, imageUrl);
+        if (store) await this.remember(input, '', '', imageUrl);
         return {
-          title: link.title,
-          description: link.description,
+          title: '',
+          description: '',
           imageUrl,
           embedUrl: videoInfo(input)?.embedUrl || null,
           warning: '',

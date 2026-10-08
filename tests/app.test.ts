@@ -142,7 +142,7 @@ describe('page lifecycle and analytics', () => {
   it('serves a static landing page at the root instead of the admin app', async () => {
     const root = await request(built.app).get('/');
     expect(root.status).toBe(200);
-    expect(root.text).toContain("<h1>Linkgarden</h1>");
+    expect(root.text).toContain('<h1>Linkgarden</h1>');
     expect(root.text).not.toContain('<script');
   });
   it('keeps every public response out of search engines while letting crawlers see that', async () => {
@@ -997,6 +997,37 @@ describe('stored previews', () => {
     expect((await request(built.app).get('/api/public/sites/Ab3xY')).body.links[0].imageUrl).toBe(
       saved.body.links[0].imageUrl,
     );
+  });
+  it('reuses a legacy image without publishing an inactive page’s custom text', async () => {
+    const imageUrl = await built.service.previews.store(await png());
+    const legacy = await built.service.create(
+      input({
+        slug: 'PrivatePage',
+        status: 'inactive',
+        links: [
+          {
+            url: 'https://example.com/shared',
+            title: 'Private custom title',
+            description: 'Private custom description',
+            imageUrl,
+          },
+        ],
+      }),
+      false,
+    );
+    expect(legacy.links[0].imageUrl).toBe(imageUrl);
+    const preview = await built.service.previews.preview('https://example.com/shared');
+    expect(preview).toMatchObject({ title: '', description: '', imageUrl });
+    expect((await db.query('SELECT title,description FROM preview_cache')).rows[0]).toMatchObject({
+      title: '',
+      description: '',
+    });
+    const publicPage = await built.service.create(
+      input({ slug: 'PublicPage', links: [{ url: 'https://example.com/shared' }] }),
+    );
+    const publicResponse = await request(built.app).get(`/api/public/sites/${publicPage.slug}`);
+    expect(publicResponse.body.links[0]).toMatchObject({ title: '', description: '', imageUrl });
+    expect(JSON.stringify(publicResponse.body)).not.toContain('Private custom');
   });
   it('imports a laptop image that repairs broken and missing link images, but keeps working ones', async () => {
     const { a, csrf } = await signedIn();
