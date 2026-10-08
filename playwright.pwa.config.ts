@@ -12,7 +12,7 @@ export default defineConfig({
     headless: true,
     viewport: { width: 390, height: 844 },
     userAgent: 'Mozilla/5.0 Chrome/150.0.0.0 Safari/537.36',
-    trace: 'retain-on-failure',
+    trace: 'off',
     screenshot: 'only-on-failure',
   },
   webServer: {

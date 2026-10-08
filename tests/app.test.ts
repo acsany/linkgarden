@@ -567,7 +567,7 @@ describe('campaigns', () => {
     const c = await built.service.campaigns.create({
       name: 'Example Company',
       code: 'acme',
-      note: 'Applied for the senior role',
+      note: 'Internal campaign note',
       status: 'active',
       sites: ['cv'],
     });
@@ -770,7 +770,7 @@ describe('campaigns', () => {
     const json = await request(built.app).get('/api/public/sites/cv?c=acme');
     for (const body of [html.text, JSON.stringify(json.body)]) {
       expect(body).not.toContain('Example Company');
-      expect(body).not.toContain('Applied for the senior role');
+      expect(body).not.toContain('Internal campaign note');
     }
     expect(html.text).toContain(`<meta property="og:url" content="${config.origin}/cv/acme">`);
     expect(json.body).not.toHaveProperty('campaignOnly');

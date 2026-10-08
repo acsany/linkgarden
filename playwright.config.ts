@@ -33,7 +33,7 @@ export default defineConfig({
     baseURL: 'http://localhost:3100',
     headless: true,
     userAgent: 'Mozilla/5.0 Chrome/150.0.0.0 Safari/537.36',
-    trace: 'retain-on-failure',
+    trace: 'off',
     screenshot: 'only-on-failure',
     // Once the PWA worker controls a page, WebKit sends its requests past page.route
     // mocks. The worker has its own suite (playwright.pwa.config.ts).
