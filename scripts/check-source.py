@@ -9,7 +9,7 @@ import sys
 
 RULES = {
     "personal email": re.compile(r"[\w.+-]+@" + r"(?:gmail|googlemail)\.com", re.I),
-    "machine path": re.compile(r"/" + r"Users/[^/\s]+/|[A-Z]:\\\\Users\\\\[^\\\\\s]+\\\\", re.I),
+    "machine path": re.compile(r"/" + r"Users/[^/\s]+/|[A-Z]:\\Users\\[^\\\s]+\\", re.I),
     "Linkgarden bearer token": re.compile(r"lg_" + r"[A-Za-z0-9_-]{40,}"),
     "private key": re.compile(r"-----BEGIN " + r"(?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     "password hash": re.compile(r"scrypt\$32768\$8\$1\$" + r"[a-f0-9]{32}\$[a-f0-9]{128}"),
