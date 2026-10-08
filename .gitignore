@@ -1,0 +1,23 @@
+node_modules/
+dist/
+dist-server/
+.data/
+.data-files/
+.test-data/
+.env
+.env.*
+!.env.example
+playwright-report/
+test-results/
+coverage/
+*.log
+*.tgz
+
+# Local exports and credentials
+private/
+scratch/
+backup.sql
+backup.dump
+*.pem
+*.key
+id_rsa
