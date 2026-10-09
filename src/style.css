@@ -1502,8 +1502,79 @@ body[data-theme] {
   display: inline-flex;
   padding: 4px;
   margin: -4px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
   font-size: 13px;
   color: var(--pg-faint);
+}
+/* The share card in a modal. The CV theme has no surface or border token. */
+.qr-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-width: none;
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid var(--pg-border, var(--pg-tint-ink));
+  border-radius: 16px;
+  background: var(--pg-surface, var(--pg-bg));
+  color: var(--pg-ink);
+  text-align: center;
+}
+.qr-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+.qr-dialog h2 {
+  margin: 0 0 14px;
+  font-size: 16px;
+}
+/* Shows a 460px square of the card around the QR tile (420px of its 630px height), so
+   the QR code is as large as fits; downloads get the whole card. */
+.qr-crop {
+  position: relative;
+  max-width: 360px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+}
+.qr-crop img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: calc(630 / 460 * 100%);
+  width: auto;
+  max-width: none;
+  transform: translate(-50%, -50%);
+}
+.qr-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.qr-download,
+.qr-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.qr-download {
+  background: var(--pg-ink);
+  color: var(--pg-bg);
+  text-decoration: none;
+}
+.qr-close {
+  border: 1px solid var(--pg-border, var(--pg-tint-ink));
+  background: none;
+  color: var(--pg-ink);
 }
 .collection-qr:hover,
 .collection-qr:focus-visible {

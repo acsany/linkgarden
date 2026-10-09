@@ -309,21 +309,31 @@ test('assigns campaigns from both sides and serves attributed campaign URLs in e
         getComputedStyle(document.querySelector('.public-wrap')!).backgroundColor,
       ]);
       expect(colors[0]).not.toBe(colors[1]);
-      // The footer links the share card, a QR code of this campaign URL.
-      const qr = pub.getByRole('link', { name: 'QR code for this page' });
-      await expect(qr).toBeVisible();
-      await expect(qr).toHaveAttribute(
-        'href',
-        /^http:\/\/localhost:3100\/api\/public\/cards\/Cv42\.png\?v=[a-f0-9]{16}&c=acme$/,
-      );
       expect(await pub.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );
       await pub.screenshot({ path: `test-results/campaign-${theme}-${colorScheme}.png` });
+      // The footer's QR button opens the share card, a QR code of this campaign URL.
+      await pub.getByRole('button', { name: 'Show QR code for this page' }).click();
+      const dialog = pub.getByRole('dialog', { name: 'Scan to open this page' });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole('img')).toHaveJSProperty('naturalWidth', 1200);
+      await expect(dialog.getByRole('link', { name: 'Download PNG' })).toHaveAttribute(
+        'href',
+        /^http:\/\/localhost:3100\/api\/public\/cards\/Cv42\.png\?v=[a-f0-9]{16}&c=acme$/,
+      );
+      await expect(dialog.getByRole('link', { name: 'Download PNG' })).toHaveAttribute(
+        'download',
+        'Cv42-acme-qr.png',
+      );
+      await pub.screenshot({ path: `test-results/qr-${theme}-${colorScheme}.png` });
+      await pub.keyboard.press('Escape');
+      await expect(dialog).toBeHidden();
     }
   }
+  await pub.getByRole('button', { name: 'Show QR code for this page' }).click();
   const image = await pub.request.get(
-    (await pub.getByRole('link', { name: 'QR code for this page' }).getAttribute('href'))!,
+    (await pub.getByRole('link', { name: 'Download PNG' }).getAttribute('href'))!,
   );
   expect(image.status()).toBe(200);
   expect(image.headers()['content-type']).toBe('image/png');

@@ -17,6 +17,20 @@ const props = defineProps<{
   cardUrl?: string;
 }>();
 const icon = (l: Link) => faIcon(resolveIcon(l, props.rules));
+// The share card opens in a modal; its image loads only once the visitor asks for it.
+const qrDialog = ref<HTMLDialogElement>(),
+  qrOpened = ref(false);
+function showQr() {
+  qrOpened.value = true;
+  qrDialog.value?.showModal();
+}
+const qrFilename = computed(() => {
+  try {
+    return new URL(props.pageUrl!).pathname.slice(1).replace(/\//g, '-') + '-qr.png';
+  } catch {
+    return 'qr-code.png';
+  }
+});
 // Clicks from a campaign URL carry its code so the server can attribute them.
 const tracked = (path: string) =>
   props.campaign ? path + '?c=' + encodeURIComponent(props.campaign) : path;
@@ -143,15 +157,34 @@ const domain = (url: string) => linkText(url, false);
         >{{ linkText(pageUrl) }}</a
       >
       <a v-else class="collection-brand" href="/"><Fa icon="leaf" /> linkgarden</a>
-      <a
+      <button
         v-if="cardUrl"
+        type="button"
         class="collection-qr"
-        :href="cardUrl"
-        target="_blank"
-        aria-label="QR code for this page"
+        aria-label="Show QR code for this page"
         title="QR code for this page"
-        ><Fa icon="qrcode"
-      /></a>
+        @click="showQr"
+      >
+        <Fa icon="qrcode" />
+      </button>
     </footer>
+    <dialog
+      v-if="cardUrl"
+      ref="qrDialog"
+      class="qr-dialog"
+      aria-labelledby="qr-dialog-title"
+      @click="$event.target === qrDialog && qrDialog.close()"
+    >
+      <h2 id="qr-dialog-title">Scan to open this page</h2>
+      <div class="qr-crop">
+        <img v-if="qrOpened" :src="cardUrl" :alt="'QR code for ' + (pageUrl || 'this page')" />
+      </div>
+      <div class="qr-dialog-actions">
+        <a class="qr-download" :href="cardUrl" :download="qrFilename"
+          ><Fa icon="download" /> Download PNG</a
+        >
+        <button type="button" class="qr-close" @click="qrDialog?.close()">Close</button>
+      </div>
+    </dialog>
   </div>
 </template>
