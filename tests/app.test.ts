@@ -15,6 +15,8 @@ import { videoInfo } from '../shared/video.js';
 import sharp from 'sharp';
 import { fetchImage } from '../server/metadata.js';
 import { randomSlug } from '../server/random.js';
+import jsQR from 'jsqr';
+import { themes } from '../shared/themes.js';
 vi.mock('../server/metadata.js', () => ({
   fetchImage: vi.fn(async () => {
     throw new Error('Image fetching is disabled in tests.');
@@ -80,7 +82,7 @@ beforeAll(async () => {
 });
 beforeEach(async () => {
   await db.query(
-    'TRUNCATE sites,campaigns,sessions,agent_tokens,files,icon_rules,preview_cache,preview_sources,preview_images CASCADE',
+    'TRUNCATE sites,campaigns,sessions,agent_tokens,files,icon_rules,preview_cache,preview_sources,preview_images,share_cards CASCADE',
   );
   built.service.previews.failedSources.clear();
   built.service.previews.failedTargets.clear();
@@ -1579,5 +1581,107 @@ describe('MCP 2026-07-28 and access scopes', () => {
         },
       });
     expect(response.status).toBe(400);
+  });
+});
+describe('share cards', () => {
+  const human = (r: request.Test) => r.set('User-Agent', 'Mozilla/5.0');
+  const ogImage = async (path: string) =>
+    /<meta property="og:image" content="([^"]+)">/.exec(
+      (await human(request(built.app).get(path))).text,
+    )?.[1];
+  // Fetches a card by its absolute URL and returns the URL its QR code opens.
+  async function scan(url: string) {
+    const { pathname, search } = new URL(url.replace(/&amp;/g, '&'));
+    const r = await request(built.app).get(pathname + search);
+    expect(r.status).toBe(200);
+    expect(r.headers['content-type']).toBe('image/png');
+    const { data, info } = await sharp(r.body)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    expect([info.width, info.height]).toEqual([1200, 630]);
+    return { text: jsQR(new Uint8ClampedArray(data), info.width, info.height)?.data, r };
+  }
+  it('replaces the first link image with a QR card that follows a renamed slug', async () => {
+    const s = await built.service.create(input({ slug: 'talks' }));
+    // Saving draws the card, so sharing needs no rendering.
+    expect((await db.query('SELECT count(*)::int AS n FROM share_cards')).rows[0].n).toBe(1);
+    const html = (await human(request(built.app).get('/talks'))).text;
+    expect(html).not.toContain('example.com/image.jpg');
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
+    expect(html).toContain('<meta property="og:image:width" content="1200">');
+    const card = (await ogImage('/talks'))!;
+    expect(card).toMatch(
+      /^http:\/\/localhost:3000\/api\/public\/cards\/talks\.png\?v=[a-f0-9]{16}$/,
+    );
+    const first = await scan(card);
+    expect(first.text).toBe(`${config.origin}/talks`);
+    expect(first.r.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+    expect(first.r.headers['content-security-policy']).toContain('sandbox');
+    // The public JSON carries the same URL for the page footer.
+    expect((await request(built.app).get('/api/public/sites/talks')).body.card).toBe(card);
+
+    await built.service.update(s.id, input({ slug: 'slides' }));
+    const renamed = (await ogImage('/slides'))!;
+    expect(renamed).not.toBe(card);
+    expect((await scan(renamed)).text).toBe(`${config.origin}/slides`);
+    expect((await request(built.app).get('/api/public/cards/talks.png')).status).toBe(404);
+    // A stale version still gets the current card, just not cached for good.
+    const stale = await request(built.app).get('/api/public/cards/slides.png?v=0000');
+    expect(stale.headers['cache-control']).toBe('public, max-age=300');
+
+    // A theme change is a new image too.
+    await built.service.update(s.id, input({ slug: 'slides', theme: 'cv' }));
+    expect(await ogImage('/slides')).not.toBe(renamed);
+  });
+  it('gives each campaign URL its own card and none to redirects or hidden pages', async () => {
+    await built.service.create(input({ slug: 'cv' }));
+    await built.service.campaigns.create({
+      name: 'Example Company',
+      code: 'acme',
+      note: '',
+      status: 'active',
+      sites: ['cv'],
+    });
+    const card = (await ogImage('/cv/acme'))!;
+    expect(card).toContain('&amp;c=acme');
+    expect((await scan(card)).text).toBe(`${config.origin}/cv/acme`);
+    // Unknown codes fall back to the unattributed page and its card.
+    expect((await scan(`${config.origin}/api/public/cards/cv.png?c=nope`)).text).toBe(
+      `${config.origin}/cv`,
+    );
+
+    await built.service.create(input({ slug: 'go', mode: 'redirect' }));
+    expect((await request(built.app).get('/api/public/sites/go')).body.card).toBeUndefined();
+    expect((await request(built.app).get('/api/public/cards/go.png')).status).toBe(404);
+
+    await built.service.create(input({ slug: 'draft', status: 'inactive' }));
+    expect((await request(built.app).get('/api/public/cards/draft.png')).status).toBe(404);
+    const { a } = await signedIn();
+    const preview = await a.get('/api/public/cards/draft.png');
+    expect(preview.status).toBe(200);
+    expect(preview.headers['cache-control']).toBe('no-store');
+    expect((await request(built.app).get('/api/public/cards/draft.md.png')).status).toBe(404);
+  });
+  it('keeps card colors in line with each theme’s light tokens', async () => {
+    const css = await readFile('src/style.css', 'utf8');
+    // The light block is the first one that sets a theme's tokens.
+    const tokens = (id: string) => {
+      const block = new RegExp(
+        `\\.theme-${id},\\s*body\\[data-theme='${id}'\\]\\s*\\{([^}]*)\\}`,
+      ).exec(css)![1];
+      return Object.fromEntries(
+        [...block.matchAll(/(--pg-[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]),
+      );
+    };
+    for (const theme of themes) {
+      const t = tokens(theme.id);
+      expect(theme.card).toEqual({
+        bg: t['--pg-bg'],
+        border: t['--pg-border'] ?? t['--pg-tint-ink'],
+        ink: t['--pg-ink'],
+        muted: t['--pg-muted'],
+      });
+    }
   });
 });

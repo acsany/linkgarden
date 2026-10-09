@@ -143,6 +143,13 @@ export async function migrate(db: Database) {
       await tx.query('ALTER TABLE sites ADD COLUMN stats_reset_at timestamptz');
       await tx.query('INSERT INTO schema_migrations(version) VALUES(11)');
     }
+    if (!done.has(12)) {
+      // Rendered share cards (og:image PNGs), keyed by cardKey(); redrawn when missing.
+      await tx.query(
+        `CREATE TABLE share_cards (id text PRIMARY KEY, bytes bytea NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`,
+      );
+      await tx.query('INSERT INTO schema_migrations(version) VALUES(12)');
+    }
   });
 }
 async function version1(tx: Queryable) {

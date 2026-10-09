@@ -4,8 +4,9 @@ import { useRoute } from 'vue-router';
 import { api } from '../state';
 import type { Site, Status } from '../types';
 // The server echoes the campaign code only when it attributes the visit, and sends a
-// status only to the signed-in admin previewing a page that is not active.
-type PublicSite = Omit<Site, 'status'> & { campaign?: string; status?: Status };
+// status only to the signed-in admin previewing a page that is not active. card is the
+// share image with the QR code.
+type PublicSite = Omit<Site, 'status'> & { campaign?: string; card?: string; status?: Status };
 import LinkCollection from './LinkCollection.vue';
 const route = useRoute(),
   site = ref<PublicSite | null>(null),
@@ -53,6 +54,7 @@ onMounted(async () => {
         :site="site"
         :campaign="site.campaign"
         :page-url="location.origin + location.pathname"
+        :card-url="site.card"
       />
     </template>
   </main>

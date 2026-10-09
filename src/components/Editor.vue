@@ -108,6 +108,8 @@ async function loadCampaigns() {
   }
 }
 const savedCampaigns = ref<CampaignRef[]>([]);
+// The saved page's share card; updatedAt makes each save a fresh image URL.
+const savedCard = ref('');
 const originalSlug = ref(''),
   error = ref(''),
   loading = ref(!isNew.value),
@@ -158,6 +160,8 @@ async function load() {
     for (const c of s.campaigns) known.value.set(c.id, c);
     savedCampaigns.value = s.campaigns;
     originalSlug.value = s.slug;
+    if (s.mode === 'aggregate')
+      savedCard.value = `/api/public/cards/${s.slug}.png?t=${encodeURIComponent(s.updatedAt)}`;
     initial.value = JSON.stringify(form);
   } catch (e) {
     error.value = (e as Error).message;
@@ -312,7 +316,8 @@ const publicPreview = computed(() => ({
           <p v-if="originalSlug && form.slug && originalSlug !== form.slug" class="info small">
             <Fa icon="link" /> /{{ originalSlug }}
             {{ savedCampaigns.length ? 'and its campaign URLs' : '' }} will stop working when you
-            save. Duplicate the page to keep both URLs with separate metrics.
+            save, including QR codes of them that are already printed or shared. Duplicate the page
+            to keep both URLs with separate metrics.
           </p>
           <label
             >Description<textarea
@@ -775,6 +780,7 @@ const publicPreview = computed(() => ({
             :site="publicPreview"
             :rules="iconRules"
             :page-url="state.origin + '/' + (form.slug.trim() || originalSlug || '…')"
+            :card-url="savedCard || undefined"
             preview
           />
         </div>

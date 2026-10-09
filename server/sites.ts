@@ -6,6 +6,7 @@ import { siteSchema, slugSchema, uuidSchema, type SiteInput } from '../shared/sc
 import { videoInfo } from '../shared/video.js';
 import { iconRulesSchema, resolveIcon, type IconRule } from '../shared/icons.js';
 import { PreviewStore } from './previews.js';
+import { CardStore } from './cards.js';
 import { AppError } from './errors.js';
 import { randomSlug } from './random.js';
 import { CampaignService } from './campaigns.js';
@@ -54,6 +55,7 @@ const withWarnings = <T extends object>(site: T, warnings: string[]) =>
 export class SiteService {
   campaigns: CampaignService;
   previews: PreviewStore;
+  cards: CardStore;
   constructor(
     public db: Database,
     public files: FileStore,
@@ -61,6 +63,7 @@ export class SiteService {
   ) {
     this.campaigns = new CampaignService(this);
     this.previews = new PreviewStore(db, origin);
+    this.cards = new CardStore(db, origin);
   }
   async list(status?: string, q = '') {
     const rows = (
@@ -158,7 +161,7 @@ export class SiteService {
       : { data: siteSchema.parse(input), warnings: [] };
     const id = randomUUID();
     try {
-      return await this.db.transaction(async (tx) => {
+      const saved = await this.db.transaction(async (tx) => {
         await this.checkFiles(tx, data.links);
         const slug = data.slug || (await this.availableSlug(tx));
         await tx.query(
@@ -180,6 +183,8 @@ export class SiteService {
           await this.insertLink(tx, id, link, position);
         return withWarnings(await this.get(id, tx), warnings);
       });
+      await this.cards.warm(saved);
+      return saved;
     } catch (err) {
       this.handleConflict(err);
     }
@@ -219,7 +224,7 @@ export class SiteService {
     const previous = await this.get(id);
     const { data, warnings } = await this.prepare(input, previous.links);
     try {
-      return await this.db.transaction(async (tx) => {
+      const saved = await this.db.transaction(async (tx) => {
         await tx.query('SELECT id FROM sites WHERE id=$1 FOR UPDATE', [id]);
         const current = await this.get(id, tx);
         await this.checkFiles(tx, data.links);
@@ -272,6 +277,8 @@ export class SiteService {
         }
         return withWarnings(await this.get(id, tx), warnings);
       });
+      await this.cards.warm(saved);
+      return saved;
     } catch (err) {
       this.handleConflict(err);
     }
@@ -329,6 +336,8 @@ export class SiteService {
       description: s.description,
       mode: s.mode,
       theme: s.theme,
+      // The share image (og:image): a QR code of this URL. Redirect pages show no HTML.
+      ...(s.mode === 'aggregate' ? { card: this.cards.url(s.slug, campaign?.code, s.theme) } : {}),
       // File items expose only their name and size; downloads go through /r/:id.
       links: s.links.map(
         ({
@@ -644,5 +653,6 @@ export class SiteService {
     const known = new Set((await this.db.query('SELECT id FROM files')).rows.map((r) => r.id));
     await this.files.sweep(known, new Date(Date.now() - 86400000));
     await this.previews.cleanup();
+    await this.cards.cleanup();
   }
 }

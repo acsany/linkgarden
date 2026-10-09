@@ -15,7 +15,7 @@ Open http://localhost:3000/admin. The development database uses PGlite in ignore
 
 ## What it does
 
-Pages can redirect to one URL or show ordered links, headings, PDFs, and video embeds. Public link pages have light and dark themes. The admin can inspect visit and click analytics, configure icon rules, import image previews through the authenticated API, and create read or write MCP tokens. Campaign codes attribute visits and clicks to assigned recipients. Public Markdown representations support clients that cannot run JavaScript.
+Pages can redirect to one URL or show ordered links, headings, PDFs, and video embeds. Public link pages have light and dark themes. The admin can inspect visit and click analytics, configure icon rules, import image previews through the authenticated API, and create read or write MCP tokens. Campaign codes attribute visits and clicks to assigned recipients. Public Markdown representations support clients that cannot run JavaScript. A link page's social preview (`og:image`) is a generated 1200×630 card with a QR code of the page URL in the theme's light colors. Saving draws the card, campaign URLs get their own, and a renamed slug or new theme changes the image URL so platforms fetch the new card. Renaming a slug does not redirect the old URL, so QR codes of it stop working.
 
 The server uses a PostgreSQL compatible schema with versioned migrations. For production, set `APP_ORIGIN` to an HTTPS origin, `DATABASE_URL` to PostgreSQL, and `FILES_DIR` to persistent storage. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD_HASH` through the setup command. Deployment infrastructure is deliberately left to the operator. Run `npm run build`, then `npm start`.
 

@@ -13,6 +13,8 @@ const props = defineProps<{
   rules?: IconRule[];
   // The page's own address, which the CV theme shows in place of the brand.
   pageUrl?: string;
+  // The share image (a QR code of the page), linked next to the footer address.
+  cardUrl?: string;
 }>();
 const icon = (l: Link) => faIcon(resolveIcon(l, props.rules));
 // Clicks from a campaign URL carry its code so the server can attribute them.
@@ -132,13 +134,24 @@ const domain = (url: string) => linkText(url, false);
         </article>
       </template>
     </div>
-    <a
-      v-if="site.theme === 'cv' && pageUrl"
-      class="collection-brand"
-      :href="pageUrl"
-      :target="preview ? '_blank' : undefined"
-      >{{ linkText(pageUrl) }}</a
-    >
-    <a v-else class="collection-brand" href="/"><Fa icon="leaf" /> linkgarden</a>
+    <footer class="collection-footer">
+      <a
+        v-if="site.theme === 'cv' && pageUrl"
+        class="collection-brand"
+        :href="pageUrl"
+        :target="preview ? '_blank' : undefined"
+        >{{ linkText(pageUrl) }}</a
+      >
+      <a v-else class="collection-brand" href="/"><Fa icon="leaf" /> linkgarden</a>
+      <a
+        v-if="cardUrl"
+        class="collection-qr"
+        :href="cardUrl"
+        target="_blank"
+        aria-label="QR code for this page"
+        title="QR code for this page"
+        ><Fa icon="qrcode"
+      /></a>
+    </footer>
   </div>
 </template>

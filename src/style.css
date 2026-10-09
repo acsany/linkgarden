@@ -1481,6 +1481,13 @@ body[data-theme] {
   font-size: 11px;
   color: var(--pg-faint);
 }
+.collection-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 38px;
+}
 .collection-brand {
   font-size: 11px;
   font-weight: 550;
@@ -1488,7 +1495,19 @@ body[data-theme] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 38px;
+}
+/* Opens the share image: a QR code of this page. */
+.collection-qr {
+  flex: none;
+  display: inline-flex;
+  padding: 4px;
+  margin: -4px;
+  font-size: 13px;
+  color: var(--pg-faint);
+}
+.collection-qr:hover,
+.collection-qr:focus-visible {
+  color: var(--pg-accent);
 }
 .video-preview {
   aspect-ratio: 16/9;
@@ -1719,15 +1738,20 @@ body[data-theme] {
 .theme-cv .video-consent {
   font-size: 11px;
 }
-.theme-cv .collection-brand {
+.theme-cv .collection-footer {
+  justify-content: flex-start;
   margin-top: 72px;
-  display: inline-block;
-  max-width: 100%;
-  box-sizing: border-box;
   padding-left: 30px;
+}
+.theme-cv .collection-brand {
+  display: inline-block;
+  min-width: 0;
   font-weight: 400;
   color: var(--pg-muted);
   overflow-wrap: anywhere;
+}
+.theme-cv .collection-qr {
+  color: var(--pg-muted);
 }
 /* Section titles sit outdented on the rail like the CV's section headings:
    icon in the icon column, text starting where the entries' rule runs. */
@@ -1801,7 +1825,7 @@ body[data-theme] {
 }
 .preview-panel .theme-cv .link-collection > h1,
 .preview-panel .theme-cv .collection-description,
-.preview-panel .theme-cv .collection-brand {
+.preview-panel .theme-cv .collection-footer {
   padding-left: 24px;
 }
 .preview-panel .theme-cv .collection-links {

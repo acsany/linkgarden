@@ -395,6 +395,30 @@ export function createApp(
     });
     res.send(Buffer.from(image.bytes));
   });
+  // The share card of /<slug> or /<slug>/<code> (?c=), drawn on first use and then stored.
+  // Card URLs carry ?v= from the page URL and theme, so a matching one never changes.
+  app.get('/api/public/cards/:file', limiter(60000, 120), async (req, res) => {
+    const file = /^([^.]+)\.png$/.exec(String(req.params.file));
+    if (!file) throw new AppError(404, 'Image unavailable.');
+    const admin = await isAdmin(req);
+    const { site } = await service.publicSite(file[1], campaignCode(req.query.c), admin);
+    if (!site.card) throw new AppError(404, 'Image unavailable.');
+    const bytes = await service.cards.png(
+      service.cards.pageUrl(site.slug, site.campaign),
+      site.theme,
+    );
+    const current = new URL(site.card).searchParams.get('v') === req.query.v;
+    res.set({
+      'Content-Type': 'image/png',
+      'Content-Security-Policy': "default-src 'none'; sandbox",
+      'Cache-Control': site.status
+        ? 'no-store'
+        : current
+          ? 'public, max-age=31536000, immutable'
+          : 'public, max-age=300',
+    });
+    res.send(bytes);
+  });
   app.get('/api/public/sites/:slug', async (req, res) => {
     const admin = await isAdmin(req);
     if (admin) res.set('Cache-Control', 'no-store');
@@ -493,15 +517,18 @@ export function createApp(
     html = html.replace('<body>', `<body data-theme="${escaped(site.theme)}">`);
     if (!html.includes('name="robots"'))
       html = html.replace('</head>', `<meta name="robots" content="${robotsTag}"></head>`);
-    const pageUrl = config.origin + '/' + slug + (site.campaign ? '/' + site.campaign : '');
+    const pageUrl = service.cards.pageUrl(site.slug, site.campaign);
     html = html.replace(
       '</head>',
       `<link rel="alternate" type="text/markdown" href="${escaped(pageUrl + '.md')}"></head>`,
     );
-    const image = site.links.find((l) => l.imageUrl)?.imageUrl;
+    // The share card replaces the first link's image as the preview: a QR code of this URL.
+    const image = site.card
+      ? `<meta property="og:image" content="${escaped(site.card)}"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="${escaped('QR code for ' + pageUrl)}"><meta name="twitter:card" content="summary_large_image">`
+      : '';
     html = html.replace(
       '</head>',
-      `<meta property="og:title" content="${escaped(site.title)}"><meta property="og:description" content="${escaped(site.description)}"><meta property="og:url" content="${escaped(pageUrl)}">${image ? `<meta property="og:image" content="${escaped(image)}">` : ''}</head>`,
+      `<meta property="og:title" content="${escaped(site.title)}"><meta property="og:description" content="${escaped(site.description)}"><meta property="og:url" content="${escaped(pageUrl)}">${image}</head>`,
     );
     res.type('html').send(html);
   };

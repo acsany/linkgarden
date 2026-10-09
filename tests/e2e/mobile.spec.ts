@@ -228,7 +228,21 @@ test('long custom URLs and public video collections fit a small phone', async ({
   await page.getByRole('link', { name: title, exact: true }).click();
   await expect(page.locator('.saved-url')).toContainText(slug);
   await fits(page);
+  // The CV footer shows the whole page URL next to the QR code link.
+  const cv = await fixture(page, {
+    title: 'CV footer',
+    slug: slug.slice(0, 62) + 'Cv',
+    theme: 'cv',
+    links: [{ url: 'https://example.com/portfolio', title: 'Portfolio' }],
+  });
   await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.goto('/' + cv.slug);
+  const qr = page.getByRole('link', { name: 'QR code for this page' });
+  await expect(qr).toBeVisible();
+  const box = (await qr.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(320);
+  await page.screenshot({ path: `test-results/cv-footer-${browserName}.png` });
+  await fits(page);
   await page.goto('/' + site.slug);
   await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
   await expect(page.locator('body')).not.toContainText('Private mobile video note');
